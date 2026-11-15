@@ -1,0 +1,36 @@
+name: Feil eller ønske
+description: Meld en feil i programmet eller foreslå en forbedring
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type
+      options: [Feil, Ønske / forbedring, Spørsmål]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versjon
+      description: Står under Help > About, f.eks. 0.5.3
+    validations:
+      required: true
+  - type: dropdown
+    id: vessel
+    attributes:
+      label: Fartøy
+      options: [MS Sidus, MT Millennium, MS Mercandian Importer, Gjelder alle]
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operativsystem
+      options: [Windows, macOS]
+  - type: textarea
+    id: what
+    attributes:
+      label: Hva skjedde, og hva forventet du?
+      description: Beskriv gjerne stegene. Dra inn skjermbilde eller .mlc-fil (zip den om GitHub ikke tar filen).
+    validations:
+      required: true

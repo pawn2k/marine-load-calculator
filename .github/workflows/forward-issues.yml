@@ -1,0 +1,49 @@
+# Forwards issues and comments from the public repository to the private development repository
+# (pawn2k/Lastekalkulator), where they are worked on. The private issue carries a marker with the
+# public issue number; closing it there closes this one (workflow in the private repository).
+# Secret MLC_PRIVATE_TOKEN: fine-grained token with Issues read/write on pawn2k/Lastekalkulator.
+# Issue text is untrusted: it is only passed to gh through environment variables.
+name: Forward issues
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+env:
+  PRIVATE_REPO: pawn2k/Lastekalkulator
+
+jobs:
+  forward:
+    if: ${{ github.event.sender.type != 'Bot' && !contains(github.event.comment.body || '', '<!-- mlc-bot -->') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Forward
+        env:
+          GH_TOKEN: ${{ secrets.MLC_PRIVATE_TOKEN }}
+          PUBLIC_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          NUMBER: ${{ github.event.issue.number }}
+          TITLE: ${{ github.event.issue.title }}
+          AUTHOR: ${{ github.event.sender.login }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+        run: |
+          marker="<!-- public-issue: ${NUMBER} -->"
+          if [ "$EVENT" = "issues" ]; then
+            printf '%s\n\n**Fra brukerrepoet:** %s (av @%s)\n\n---\n\n%s\n' "$marker" "$ISSUE_URL" "$AUTHOR" "$ISSUE_BODY" > body.md
+            gh issue create --repo "$PRIVATE_REPO" --title "[Bruker #${NUMBER}] ${TITLE}" --body-file body.md
+            printf '<!-- mlc-bot -->\nTakk! Saken er registrert og blir fulgt opp. Den lukkes her når den er løst.\n' > reply.md
+            GH_TOKEN="$PUBLIC_TOKEN" gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file reply.md
+          else
+            private=$(gh issue list --repo "$PRIVATE_REPO" --state all --search "\"public-issue: ${NUMBER}\" in:body" --json number --jq '.[0].number')
+            [ -n "$private" ] || exit 0
+            printf '**Kommentar fra @%s** (%s):\n\n%s\n' "$AUTHOR" "$COMMENT_URL" "$COMMENT_BODY" > comment.md
+            gh issue comment "$private" --repo "$PRIVATE_REPO" --body-file comment.md
+          fi
